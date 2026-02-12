@@ -14,7 +14,7 @@ account_service = AccountService()
 def create_account(
     request: Request,
     data: CreateAccountRequest,
-    _: dict = Depends(require_roles("admin")),
+    _: dict = Depends(require_roles("admin", "teller")),
 ):
     db = request.state.service  # privileged client
 

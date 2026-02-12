@@ -1,4 +1,4 @@
-from Backend.app.core.supabase_client import supabase
+from app.core.supabase_client import supabase
 
 def get_account_no(holder_name: str):
     res = (
