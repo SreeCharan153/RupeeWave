@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
 
@@ -36,11 +38,14 @@ class Settings(BaseSettings):
             return self.SUPABASE_JWT_SECRET
         if self.SECRET_KEY:
             return self.SECRET_KEY
+        if os.getenv("TESTING", "0") == "1":
+            return "test-jwt-secret"
         raise ValueError("No JWT secret found. Set SUPABASE_JWT_SECRET or SECRET_KEY.")
 
 
 # -------------------- LOAD SETTINGS --------------------
 settings = Settings()
+IS_TESTING = os.getenv("TESTING", "0") == "1"
 
 # -------------------- MANUAL STARTUP VALIDATION --------------------
 required_vars = [
@@ -49,9 +54,11 @@ required_vars = [
     ("SUPABASE_SERVICE_ROLE_KEY", settings.SUPABASE_SERVICE_ROLE_KEY),
 ]
 
-for key, value in required_vars:
-    if not value:
-        raise RuntimeError(f"{key} missing from .env")
+if not IS_TESTING:
+    for key, value in required_vars:
+        if not value:
+            raise RuntimeError(f"{key} missing from .env")
 
 # JWT Secret is checked via property inside JWT_SECRET
-_ = settings.JWT_SECRET
+if not IS_TESTING:
+    _ = settings.JWT_SECRET

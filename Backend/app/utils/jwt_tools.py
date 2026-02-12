@@ -1,6 +1,6 @@
 from typing import Dict, Any
 import jwt
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 
 from app.config import settings
@@ -27,7 +27,7 @@ def decode_token(token: str) -> Dict[str, Any]:
 
 
 def make_access(sub: str, app_role: str) -> str:
-    exp = int((datetime.now(UTC) + ACCESS_TTL).timestamp())
+    exp = int((datetime.now(timezone.utc) + ACCESS_TTL).timestamp())
     return encode_token({
         "sub": str(sub),
         "role": "authenticated",
@@ -38,7 +38,7 @@ def make_access(sub: str, app_role: str) -> str:
 
 
 def make_refresh(sub: str, app_role: str) -> str:
-    exp = int((datetime.now(UTC) + REFRESH_TTL).timestamp())
+    exp = int((datetime.now(timezone.utc) + REFRESH_TTL).timestamp())
     return encode_token({
         "sub": str(sub),
         "role": "authenticated",
