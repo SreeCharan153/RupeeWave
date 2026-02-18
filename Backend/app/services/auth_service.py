@@ -1,5 +1,5 @@
 from bcrypt import hashpw, gensalt, checkpw
-from typing import Tuple, Any
+from typing import Tuple, Any, Optional
 from fastapi import Request
 import random
 from supabase import Client
@@ -7,9 +7,13 @@ from supabase import Client
 
 class AuthService:
     def __init__(self):
-        pass  # no DB stored here
+        pass
 
-    def get_user(self, db: Client, username: str):
+
+    # ---------------------------
+    # USER FETCH
+    # ---------------------------
+    def get_user(self, db: Client, username: str) -> Optional[dict]:
         try:
             response = (
                 db.table("users")
@@ -20,8 +24,17 @@ class AuthService:
             )
         except Exception:
             return None
-        return response.data if response.data else None
 
+        data = response.data
+        if not isinstance(data, dict):
+            return None
+
+        return data
+
+
+    # ---------------------------
+    # AUDIT LOGGING
+    # ---------------------------
     def log_event(self, db: Client, actor: str, action: str, details: str, request: Request):
         try:
             ip = request.client.host if request.client else "unknown"
@@ -46,33 +59,57 @@ class AuthService:
         except Exception:
             pass
 
+
+    # ---------------------------
+    # HASHING
+    # ---------------------------
     def hash_pin(self, pin: str) -> str:
         return hashpw(pin.encode(), gensalt()).decode()
 
     def verify_pin(self, pin: str, hashed_pin: str) -> bool:
         return checkpw(pin.encode(), hashed_pin.encode())
 
+
+    # ---------------------------
+    # ACCOUNT NUMBER GENERATION
+    # ---------------------------
     def generate_account_no(self) -> str:
         return "AC" + str(random.randint(10**9, 10**10 - 1))
 
-    def create(self, db: Client, holder: str, pin: str, vpin: str, mobileno: str, gmail: str) -> Tuple[bool, Any]:
+
+    # ---------------------------
+    # CREATE CUSTOMER ACCOUNT
+    # ---------------------------
+    def create(
+        self,
+        db: Client,
+        holder: str,
+        pin: str,
+        vpin: str,
+        mobileno: str,
+        gmail: str
+    ) -> Tuple[bool, Any]:
+
         # Validation
         if len(pin) != 4 or not pin.isdigit():
             return False, "PIN must be 4 digits."
+
         if pin != vpin:
             return False, "PINs do not match."
+
         if len(mobileno) != 10 or not mobileno.isdigit():
             return False, "Invalid mobile number."
+
         if '@' not in gmail or gmail.count("@") != 1:
             return False, "Invalid email."
 
         try:
-            account_no = str(self.generate_account_no())
+            account_no = self.generate_account_no()
             hashed = self.hash_pin(pin)
         except Exception as e:
             return False, f"Server Error: {e}"
 
-        # Insert user
+        # Insert into users
         try:
             user_res = (
                 db.table("users")
@@ -89,12 +126,17 @@ class AuthService:
                 return False, "User already exists."
             return False, f"User creation failed: {e}"
 
-        if not user_res.data:
+        data = user_res.data
+        if not isinstance(data, list) or not data:
             return False, "User insert failed."
 
-        user_id = user_res.data[0]["id"]
+        row = data[0]
+        if not isinstance(row, dict) or "id" not in row:
+            return False, "User insert failed."
 
-        # Insert account
+        user_id = row["id"]
+
+        # Insert into accounts
         try:
             acc_res = (
                 db.table("accounts")
@@ -105,13 +147,13 @@ class AuthService:
                     "mobileno": mobileno,
                     "gmail": gmail,
                     "failed_attempts": 0,
-                    "is_locked": 0,
+                    "is_locked": False,
                     "user_id": user_id,
                 })
                 .execute()
             )
         except Exception as e:
-            # rollback user
+            # Rollback user
             db.table("users").delete().eq("id", user_id).execute()
 
             msg = str(e).lower()
@@ -124,22 +166,42 @@ class AuthService:
             "message": f"Account created successfully with Acc_No {account_no}"
         }
 
-    def create_employ(self, db: Client, username: str, pas: str, role: str) -> Tuple[bool, str]:
+
+    # ---------------------------
+    # CREATE EMPLOYEE
+    # ---------------------------
+    def create_employ(
+        self,
+        db: Client,
+        username: str,
+        pas: str,
+        role: str
+    ) -> Tuple[bool, str]:
+
         try:
             hashed = self.hash_pin(pas)
+
             db.table("users").insert({
                 "user_name": username,
                 "password": hashed,
                 "role": role
             }).execute()
+
             return True, f"User created: {username}"
+
         except Exception as e:
             msg = str(e).lower()
             if "duplicate" in msg or "unique constraint" in msg:
                 return False, "Username already exists."
+
             return False, f"Database Error: {e}"
 
-    def password_check(self, db: Client, username: str, pw: str) -> Any:
+
+    # ---------------------------
+    # PASSWORD CHECK
+    # ---------------------------
+    def password_check(self, db: Client, username: str, pw: str) -> bool:
+
         try:
             resp = (
                 db.table("users")
@@ -151,14 +213,34 @@ class AuthService:
         except Exception:
             return False
 
-        if not resp.data:
+        data = resp.data
+        if not isinstance(data, list) or not data:
             return False
 
-        stored_hash = resp.data[0]["password"]
+        row = data[0]
+        if not isinstance(row, dict):
+            return False
+
+        stored_hash = row.get("password")
+        if not isinstance(stored_hash, str):
+            return False
+
         return checkpw(pw.encode(), stored_hash.encode())
 
-    def check(self, db: Client, ac_no: str, pin: str, request: Request) -> Tuple[bool, str]:
+
+    # ---------------------------
+    # PIN CHECK WITH LOCKING
+    # ---------------------------
+    def check(
+        self,
+        db: Client,
+        ac_no: str,
+        pin: str,
+        request: Request
+    ) -> Tuple[bool, str]:
+
         pin = str(pin).strip()
+
         try:
             response = (
                 db.table("accounts")
@@ -171,13 +253,23 @@ class AuthService:
             self.log_event(db, "unknown", "pin_failed", f"DB Error: {e}", request)
             return False, "Server error. Try again."
 
-        if not response or not response.data:
-            self.log_event(db, "unknown", "pin_failed", f"Account {ac_no} not found", request)
+        data = response.data
+        if not isinstance(data, dict):
+            self.log_event(db, "unknown", "pin_failed", "Account not found", request)
             return False, "Account not found."
 
-        stored_hash = response.data["pin"]
-        attempts = response.data["failed_attempts"] or 0
-        locked = response.data["is_locked"]
+        stored_hash = data.get("pin")
+        attempts = data.get("failed_attempts", 0)
+        locked = data.get("is_locked", False)
+
+        if not isinstance(stored_hash, str):
+            return False, "Server error."
+
+        if not isinstance(attempts, int):
+            attempts = 0
+
+        if not isinstance(locked, bool):
+            locked = False
 
         if locked:
             self.log_event(db, ac_no, "pin_failed", "Account locked", request)
@@ -185,30 +277,36 @@ class AuthService:
 
         if self.verify_pin(pin, stored_hash):
             try:
-                db.table("accounts").update({"failed_attempts": 0}).eq("account_no", ac_no).execute()
-            except:
+                db.table("accounts").update({
+                    "failed_attempts": 0
+                }).eq("account_no", ac_no).execute()
+            except Exception:
                 pass
 
             self.log_event(db, ac_no, "pin_success", "PIN verified", request)
             return True, "PIN verified."
 
         attempts += 1
+
         if attempts >= 3:
             try:
                 db.table("accounts").update({
                     "failed_attempts": attempts,
                     "is_locked": True
                 }).eq("account_no", ac_no).execute()
-            except:
+            except Exception:
                 pass
 
             self.log_event(db, ac_no, "account_locked", "3 wrong attempts", request)
             return False, "Account locked after 3 wrong PIN attempts."
 
         try:
-            db.table("accounts").update({"failed_attempts": attempts}).eq("account_no", ac_no).execute()
-        except:
+            db.table("accounts").update({
+                "failed_attempts": attempts
+            }).eq("account_no", ac_no).execute()
+        except Exception:
             pass
 
-        self.log_event(db, ac_no, "pin_failed", f"Wrong PIN, {3-attempts} tries left", request)
+        self.log_event(db, ac_no, "pin_failed", f"Wrong PIN, {3 - attempts} tries left", request)
+
         return False, f"Wrong PIN. {3 - attempts} tries left."
