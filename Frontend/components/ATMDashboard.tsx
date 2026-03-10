@@ -211,8 +211,8 @@ export function ATMDashboard({ role, userName, onLogout }: DashboardProps) {
               />
 
               <div>
-                <h1 className="text-xl font-bold text-gray-900">ATM Management System</h1>
-                <p className="text-sm text-gray-600">Secure Banking Operations</p>
+                <h1 className="text-xl font-bold text-gray-900">RupeeWave</h1>
+                <p className="text-sm text-gray-600">Secure Banking System</p>
               </div>
             </div>
 
@@ -270,7 +270,7 @@ export function ATMDashboard({ role, userName, onLogout }: DashboardProps) {
               </div>
               <div>
                 <h2 className="text-3xl font-bold text-gray-900">
-                  Welcome to ATM System
+                  Welcome to RupeeWave
                 </h2>
                 <p className="text-lg text-gray-600 mt-2">
                   Manage accounts, process transactions, and update customer information

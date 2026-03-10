@@ -61,10 +61,10 @@ export function PasswordAuth({ onAuthenticated }: PasswordAuthProps) {
 
           <div>
             <CardTitle className="text-2xl font-bold text-gray-900">
-              ATM Login
+              RupeeWave Login
             </CardTitle>
             <CardDescription className="text-gray-600 mt-2">
-              Enter your User ID and Password to access ATM services
+              Enter your User ID and Password to access RupeeWave services
             </CardDescription>
           </div>
         </CardHeader>

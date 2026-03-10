@@ -12,3 +12,7 @@ class CreateAccountRequest(BaseModel):
     vpin: str = Field(..., pattern=r"^\d{4}$")
     mobileno: str = Field(..., min_length=10, max_length=10, pattern=r"^\d{10}$")
     gmail: EmailStr
+
+class BalanceEnquiryRequest(BaseModel):
+    acc_no: str = Field(..., min_length=3, max_length=32)
+    pin: str = Field(..., pattern=r"^\d{4}$")
