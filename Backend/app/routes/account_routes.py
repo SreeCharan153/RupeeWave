@@ -41,7 +41,7 @@ def create_account(
 def enquiry(
     data: BalanceEnquiryRequest,
     request: Request,
-    _: dict = Depends(require_roles("admin", "teller")),
+    _: dict = Depends(require_roles("admin", "teller","customer")),
 ):
     db = request.state.service
 
