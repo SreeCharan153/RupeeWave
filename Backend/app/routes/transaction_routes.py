@@ -14,7 +14,7 @@ transaction_service = TransactionService()
 def deposit(
     request: Request,
     data: TransactionRequest,
-    _: dict = Depends(require_roles("admin", "teller", "customer")),
+    _: dict = Depends(require_roles("admin", "teller")),
 ):
     db = request.state.service  # privileged DB client
 
@@ -37,7 +37,7 @@ def deposit(
 def withdraw(
     request: Request,
     data: TransactionRequest,
-    _: dict = Depends(require_roles("admin", "teller", "customer")),
+    _: dict = Depends(require_roles("admin", "teller")),
 ):
     db = request.state.service
 

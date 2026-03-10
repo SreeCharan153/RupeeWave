@@ -16,7 +16,7 @@ def get_history(
     ac_no: str,
     pin: str,
     request: Request,
-    _: dict = Depends(require_roles("admin", "teller")),
+    _: dict = Depends(require_roles("admin", "teller","customer")),
 ):
     db = request.state.service
 
