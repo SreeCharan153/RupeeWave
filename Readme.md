@@ -23,7 +23,9 @@ Modern banking simulation with full authentication, RLS-backed authorization, tr
 | ------------------------ | ---------------------------------------------------------------- |
 | 🖥️ **Frontend**         | [https://rupeewave.vercel.app](https://rupeewave.vercel.app)     |
 | ⚙️ **Backend (Swagger)** | [https://rupeewave.onrender.com](https://rupeewave.onrender.com) |
-
+## 🔐 Demo Login
+User ID: Charan  
+Password: Charan@123
 ---
 
 # 🧠 Architecture
