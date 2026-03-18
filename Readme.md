@@ -1,7 +1,7 @@
-# 📌 **RupeeWave – Secure Banking ATM System**
+# 📌 **RupeeWave – Secure Banking System**
 
 Modern banking simulation with full authentication, RLS-backed authorization, transaction processing and audit logs built on **FastAPI + Supabase + Next.js**.
-
+# ⚠️ Note: First request may take ~30–50 seconds due to free hosting cold start.
 <p align="center">
   <img src="./assets/branding/banner-dark-blueprint.png.png" width="100%" />
 </p>
